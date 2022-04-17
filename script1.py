@@ -5,43 +5,40 @@ import scipy
 from matplotlib import pyplot as plt
 from scipy.signal import convolve2d
 
-ellipsesImgs = []  # ellipses images
 
-def readImgs():
+def readImages():
+    images = []
     # image 1
-    img = cv2.imread("./ellipses/0_small.jpeg")
+    img = cv2.imread("./ellipses/9_small.jpeg")
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ellipsesImgs.append(img_gray)
+    images.append(img_gray)
 
     # image 2
     img = cv2.imread("./ellipses/2_small.jpeg")
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ellipsesImgs.append(img_gray)
+    images.append(img_gray)
 
     # image 3
     img = cv2.imread("./ellipses/3_small.jpeg")
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ellipsesImgs.append(img_gray)
+    images.append(img_gray)
 
     # image 4
     img = cv2.imread("./ellipses/5_small.jpeg")
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ellipsesImgs.append(img_gray)
+    images.append(img_gray)
 
     # image 5
     img = cv2.imread("./ellipses/6_small.jpeg")
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ellipsesImgs.append(img_gray)
+    images.append(img_gray)
 
     # image 6
     img = cv2.imread("./ellipses/7_smal.jpeg")
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ellipsesImgs.append(img_gray)
+    images.append(img_gray)
 
-
-def multiView_Denoising(img):
-    pass
-
+    return images
 
 def hough_ellipses(image):
     newImg = np.copy(image)
@@ -62,7 +59,28 @@ def hough_ellipses(image):
 
 
 if __name__ == "__main__":
-    readImgs()
+    images = readImages()
     # first image:
+    img = images[0]
+    edges = cv2.GaussianBlur(img, (7, 7), 1)
+    edges = cv2.Canny(edges, 50, 150)
 
+    edges = cv2.dilate(
+        edges,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)),
+        iterations=1
+    )
+    edges = cv2.erode(
+        edges,
+        cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)),
+        iterations=1
+    )
+
+    plt.subplot(1, 2, 1), plt.imshow(img, cmap='gray')
+    plt.title('Original'), plt.xticks([]), plt.yticks([])
+    plt.subplot(1, 2, 2), plt.imshow(edges, cmap='gray')
+    plt.title("edge image"), plt.xticks([]), plt.yticks([])
+
+
+    plt.show()
 
