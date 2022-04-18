@@ -230,16 +230,15 @@ def script(images_set, set_name):
                 denoised_im[i][j] /= counters[i][j]
 
     plotImages(target, denoised_im, set_name)
-
-
+# TODO
 if __name__ == '__main__':
     read_images()
 
-    my_printer("working on cameleon")
-    script(cameleon_set, "cameleon_Denoised")
-    # my_printer("working on eagle")
-    # script(eagle_set, "eagle_Denoised")
-    # my_printer("working on palm")
-    # script(palm_set, "palm_Denoised")
-    # my_printer("working on einstein")
-    # script(einstein_set, "einstein_Denoised")
+    # my_printer("working on cameleon")
+    # script(cameleon_set, "cameleon_Denoised")
+    my_printer("working on eagle")
+    script(eagle_set, "eagle_Denoised")
+    my_printer("working on palm")
+    script(palm_set, "palm_Denoised")
+    my_printer("working on einstein")
+    script(einstein_set, "einstein_Denoised")

@@ -6,6 +6,32 @@ from matplotlib import pyplot as plt
 from scipy.signal import convolve2d
 
 
+
+#TODO Flow:
+'''
+1.  For each two edge points (P, Q) in edge image:
+    If the tangents are not paralell:
+    Calculate M = mid point of (P, Q):
+        M_x = (P_x + Q_x)/2 (Same for Y)
+        
+    e1 = Slope of the Tangent at point P
+    e2 = Slope of the Tangent at point Q
+    
+    The equation for line MT is:
+    
+    y(t1 - m1) = x(t2 - m2) + m2*t1 - m1*t2
+    
+    t1 = (y1 - y2 - x1*e1 + x2*e2)/(e2-e1)
+    t2 = ( e1*e2*(x2 - x1) - y2*e1 + y1*e2)/(e2 - e1)
+    
+2.  Vote for each point on MT line 
+-- possible_ellipse = (center_x, center_y, ... )
+-- votes[possible_ellipse] += 1
+3.  The points with most votes after 2. are the winners for Ellipse Center
+-- sorted(votes, reverse=True)[:k]
+
+
+'''
 def readImages():
     images = []
     # image 1
