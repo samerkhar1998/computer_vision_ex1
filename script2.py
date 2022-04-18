@@ -1,4 +1,6 @@
 import os
+import random
+
 import cv2 as cv
 import math
 import numpy as np
@@ -11,11 +13,13 @@ einstein_set = []
 palm_set = []
 set = []
 
+
 def my_printer(str):
     print(f"----------------------{str}----------------------")
 
 
 def read_images():
+    global cameleon_set, eagle_set, einstein_set, palm_set
     my_printer("Reading Images")
     path_to_dir = "./denoising_sets/"
 
@@ -31,14 +35,13 @@ def read_images():
                 curr_images.append(curr_img)
 
         if dir == 'cameleon__N_8__sig_noise_5__sig_motion_103':
-            cameleon_set.append((target, curr_images))
+            cameleon_set = [target, curr_images]
         elif dir == 'eagle__N_16__sig_noise_13__sig_motion_76':
-            eagle_set.append((target, curr_images))
+            eagle_set = [target, curr_images]
         elif dir == 'palm__N_4__sig_noise_5__sig_motion_ROT':
-            palm_set.append((target, curr_images))
+            palm_set = [target, curr_images]
         elif dir == 'einstein__N_5__sig_noise_5__sig_motion_274':
-            einstein_set.append((target, curr_images))
-
+            einstein_set = [target, curr_images]
 
 
 def sift_calculator(target, images):
@@ -69,36 +72,37 @@ def calc_dist_matrix(des1, des2):
 
 
 # For each row in descriptor_target, get the best k indexes in descriptor_image that have best matches
-def knn_match(descriptor_target, descriptor_image, k=2):
+# def knn_match(descriptor_target, descriptor_image, k=2):
+#
+#     dist_matrix = calc_dist_matrix(descriptor_target, descriptor_image)
+#     my_printer("MATCHING Images")
+#     matches = []
+#     for i in range(len(descriptor_target)):
+#         curr_dist_row = dist_matrix[i]
+#
+#         # 0: dist=15, 1: dist=7, 2: dist=2, 3: dist=166, 4: dist=1
+#         distances_dict = {j: curr_dist_row[j] for j in range(len(curr_dist_row))}
+#
+#         # sorted(distances_dict.items(), key = lambda d: d[1])
+#         # 4: dist=1, 2: dist=2, 1: dist=7,  0: dist=15,  3: dist=166
+#
+#         # sorted(distances_dict.items(), key = lambda d: d[1])[:k]
+#         # 4: dist=1, 2: dist=2, 1: dist=7,
+#         best_k_matches = [(i, j, dist) for j, dist in sorted(distances_dict.items(), key=lambda d: d[1])[:k]]
+#
+#         matches.append(best_k_matches)
+#     return matches
+#
 
-    dist_matrix = calc_dist_matrix(descriptor_target, descriptor_image)
-    my_printer("MATCHING Images")
-    matches = []
-    for i in range(len(descriptor_target)):
-        curr_dist_row = dist_matrix[i]
 
-        # 0: dist=15, 1: dist=7, 2: dist=2, 3: dist=166, 4: dist=1
-        distances_dict = {j: curr_dist_row[j] for j in range(len(curr_dist_row))}
-
-        # sorted(distances_dict.items(), key = lambda d: d[1])
-        # 4: dist=1, 2: dist=2, 1: dist=7,  0: dist=15,  3: dist=166
-
-        # sorted(distances_dict.items(), key = lambda d: d[1])[:k]
-        # 4: dist=1, 2: dist=2, 1: dist=7,
-        best_k_matches = [(i, j, dist) for j, dist in sorted(distances_dict.items(), key=lambda d: d[1])[:k]]
-
-        matches.append(best_k_matches)
-    return matches
-
-
-def extract_matches_pass_ratio(matches, ratio=0.8):
-    my_printer("RATIOING Images")
-    passed_matches = []
-    for match1, match2 in matches:
-        dist1, dist2 = match1.distance, match2.distance
-        if dist1 < ratio * dist2:
-            passed_matches.append([match1])
-    return passed_matches
+# def extract_matches_pass_ratio(matches, ratio=0.8):
+#     my_printer("RATIOING Images")
+#     passed_matches = []
+#     for match1, match2 in matches:
+#         dist1, dist2 = match1.distance, match2.distance
+#         if dist1 < ratio * dist2:
+#             passed_matches.append([match1])
+#     return passed_matches
 
 
 def find_homography(matches, target_kp, img_kp):
@@ -108,10 +112,8 @@ def find_homography(matches, target_kp, img_kp):
     dst_pts = np.zeros((len(matches), 2), dtype=np.float32)
 
     for i in range(len(matches)):
-
         src_pts[i, :] = img_kp[matches[i][0].trainIdx].pt
         dst_pts[i, :] = target_kp[matches[i][0].queryIdx].pt
-
 
     M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
 
@@ -131,47 +133,88 @@ def plotImages(target, denoised, imageName):
     cv.waitKey(0)
 
 
-def RANSACK(target_des, img_des, ratio=0.8):
+def findMatches(target_des, img_des, target_kp, img_kp, ratio=0.8, iterations=10, k=4):
     bf = cv.BFMatcher()
     matches = bf.knnMatch(target_des, img_des, k=2)
+    # matches2 = bf.knnMatch(img_des, target_des, k=2)
 
     good_matches = []
-    for match1, match2 in matches:
-        if match1.distance < ratio * match2.distance:
-            good_matches.append([match1])
+    for m, n in matches:
+        if m.distance < ratio * n.distance:
+            good_matches.append(m)
 
-    return good_matches
+    best_model_inliers = -1
+    best_M = None
+
+    for i in range(250):
+        counter = 0
+        random_matches = random.sample(good_matches,
+                                       k)  # Sample random matches according to homographic/affine parameter = k
+
+        src_pts = np.float32([img_kp[random_matches[i].trainIdx].pt for i in range(k)])
+        dst_pts = np.float32([target_kp[random_matches[i].queryIdx].pt for i in range(k)])
+
+        M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
+
+        for m in good_matches:
+            m_source = img_kp[m.trainIdx].pt
+            m_target_old = target_kp[m.queryIdx].pt
+            m_target_new = np.matmul(M, [m_source[0], m_source[1], 1])
+
+            if m_target_new[2] != 0:
+                m_target_new[0] = m_target_new[0] / m_target_new[2]
+                m_target_new[1] = m_target_new[1] / m_target_new[2]
+
+            euclidean_distance = math.sqrt(
+                ((m_target_old[0] - m_target_new[0]) ** 2) + ((m_target_old[1] - m_target_new[1]) ** 2))
+            if euclidean_distance < 0.5:
+                counter += 1
+
+        if counter > best_model_inliers:
+            best_model_inliers = counter
+            best_M = M
+
+    return best_M, good_matches
 
 
 def script(images_set, set_name):
     results = []
-
-    target, images = images_set[0][0], images_set[0][1]
+    target, images = images_set[0], images_set[1]
 
     target_sift, img_sift = sift_calculator(target, images)
 
     target_kp, target_des = target_sift
 
     # bf = cv.BFMatcher()
-    counters = np.zeros(shape=target.shape)
+    counters = np.zeros(shape=target.shape[:2])
 
     for i, curr_sift in enumerate(img_sift):
         img_kp, img_des = curr_sift
         curr_img = images[i]
 
-        matches = RANSACK(target_des, img_des)
+        M, matches = findMatches(target_des, img_des, target_kp, img_kp)
 
-        M, mask = find_homography(matches, target_kp, img_kp)
         h, w, channels = target.shape
-        dst_img = cv.warpPerspective(curr_img, M, (w, h), flags=cv.INTER_CUBIC)
 
-        results.append(dst_img)
-        ones = np.ones(shape=target.shape)  # will use it for counting for each pixel how many pixels were
-        # mapped to it
-        ones = cv.warpPerspective(ones, M, (w, h), flags=cv.INTER_CUBIC)
+        dst = cv.warpPerspective(curr_img, M, (w, h))
 
-        ones[ones != 0] = 1
-        counters += ones
+        results.append(dst)
+
+        ones = np.ones(shape=target.shape[:2])
+        ones = cv.warpPerspective(ones, M, (w, h))
+
+        # cv.imshow('Denoising Result', dst)
+        # cv.imshow('Target Image', ones)
+        # cv.waitKey(0)
+        new_img = np.copy(dst)
+        for i in range(len(new_img)):
+            for j in range(len(new_img[i])):
+                color = new_img[i][j]
+                if color.any():
+                    counters[i][j] += 1
+
+        # ones[dst != 0] = 1
+        # counters += ones
 
 
     denoised_im = np.zeros(shape=target.shape, dtype=np.float32)
@@ -182,24 +225,21 @@ def script(images_set, set_name):
 
     for i in range(denoised_im.shape[0]):
         for j in range(denoised_im.shape[1]):
-            for k in range(denoised_im.shape[2]):
-                if counters[i][j][k] != 0:  # avoiding dividing by 0
-                    denoised_im[i][j][k] /= counters[i][j][k]
+        #     for k in range(denoised_im.shape[2]):
+            if counters[i][j] != 0:  # avoiding dividing by 0
+                denoised_im[i][j] /= counters[i][j]
 
     plotImages(target, denoised_im, set_name)
-    return
+
 
 if __name__ == '__main__':
     read_images()
+
     my_printer("working on cameleon")
     script(cameleon_set, "cameleon_Denoised")
-    my_printer("working on eagle")
-    script(eagle_set, "eagle_Denoised")
-    my_printer("working on palm")
-    script(palm_set, "palm_Denoised")
-    my_printer("working on einstein")
-    script(einstein_set, "einstein_Denoised")
-
-
-
-
+    # my_printer("working on eagle")
+    # script(eagle_set, "eagle_Denoised")
+    # my_printer("working on palm")
+    # script(palm_set, "palm_Denoised")
+    # my_printer("working on einstein")
+    # script(einstein_set, "einstein_Denoised")
