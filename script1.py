@@ -65,21 +65,23 @@ if __name__ == "__main__":
     edges = cv2.GaussianBlur(img, (7, 7), 1)
     edges = cv2.Canny(edges, 50, 150)
 
-    edges = cv2.dilate(
-        edges,
-        cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)),
-        iterations=1
-    )
-    edges = cv2.erode(
-        edges,
-        cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)),
-        iterations=1
-    )
+    sobelx = cv2.Sobel(img, cv2.CV_64F, 1, 0, ksize=-1)
+    sobely = cv2.Sobel(img, cv2.CV_64F, 0, 1, ksize=-1)
+    gradient = np.arctan2(sobely, sobelx)
 
-    plt.subplot(1, 2, 1), plt.imshow(img, cmap='gray')
+    plt.imshow(gradient, cmap='gray')
+    plt.title("gradient")
+    plt.show()
+    plt.figure()
+    plt.subplot(2, 2, 1), plt.imshow(img, cmap='gray')
     plt.title('Original'), plt.xticks([]), plt.yticks([])
-    plt.subplot(1, 2, 2), plt.imshow(edges, cmap='gray')
+    plt.subplot(2, 2, 2), plt.imshow(edges, cmap='gray')
     plt.title("edge image"), plt.xticks([]), plt.yticks([])
+    plt.subplot(2,2,3) , plt.imshow(sobely, cmap='gray')
+    plt.title("sobel-y"), plt.xticks([]), plt.yticks([])
+    plt.subplot(2,2,4), plt.imshow(sobelx, cmap='gray')
+    plt.title("sobel-x"), plt.xticks([]), plt.yticks([])
+
 
 
     plt.show()
