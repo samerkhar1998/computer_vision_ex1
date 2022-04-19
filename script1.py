@@ -31,7 +31,58 @@ from scipy.signal import convolve2d
 -- sorted(votes, reverse=True)[:k]
 
 
-'''
+'''''
+""" 1 """
+
+def hough_centering(img,image_slops):
+    """
+    check centering in each iteration for all elements
+    :param img: given image (dont need it )
+    :param image_slops: slopes of every element in the image
+    :return: an image of votes
+    """
+    voting_image=np.zeros((len(img),len(img[0])))
+    for i in range(len(img)):
+        for j in range(len(img[0])):
+            for row in range(i,len(img)):
+                for col  in range(j,len(img[0])):
+                    # col represents y
+                    # row represents x
+                        p,q,z_p,z_q=(j,i),(col,row),image_slops[i][j],image_slops[row][col]
+                        a,b,flag=centering(p,q,z_p,z_q)
+                        vote(a,b,voting_image) if flag else None
+    votes2=voting_image.ravel()
+
+def centering(p,q,z_p,z_q):
+    """ given two points ,and thier slopes ,return its TM line as two parameters
+      :param p  an edge point
+      :param q  an edge point
+      :param z_q  slop of q
+      :param z_p  slop of p
+      :return a,b,flag  as in y=ax+b ,flag is true if a and b are relevant False otherwise
+    """
+
+    (x1,y1)=p[0],p[1]
+    (x2,y2)=q[0],q[1]
+    a=b=0
+    flag=False
+    if z_p!=z_q:
+        t1 = (y1 - y2 - x1 * z_p + x2 * z_q) / (z_q - z_p)
+        t2 = ((z_p * z_q)(x2 - x1) - y2 * z_p + y1 * z_q) / (z_q - z_p)
+        m1 = (x1 + x2) / 2
+        m2 = (y1 + y2) / 2
+        a=(t2-m2)/(t1-m1)
+        b=(m2*t1-m1*t2)/(t1-m1)
+        flag=True
+    return a,b,flag
+
+def vote(a,b,votes):
+    initial_x=False
+    for i in range(len(votes)):
+        initial_x= i if i*a+b else False
+    for i in range(initial_x,len(votes)):
+        votes[i][i*a+b]+=1
+
 def readImages():
     images = []
     # image 1
