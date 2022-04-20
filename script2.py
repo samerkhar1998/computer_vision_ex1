@@ -1,7 +1,6 @@
 import os
 import random
 
-import cv2
 import cv2 as cv
 import math
 import numpy as np
@@ -12,7 +11,6 @@ cameleon_set = []
 eagle_set = []
 einstein_set = []
 palm_set = []
-set = []
 
 
 def my_printer(str):
@@ -36,6 +34,7 @@ def read_images():
     global cameleon_set, eagle_set, einstein_set, palm_set
     my_printer("Reading Images")
     path_to_dir = "./denoising_sets/"
+    target = None
 
     for dir in os.listdir(path_to_dir):
         curr_path = path_to_dir + dir + "/"
@@ -82,6 +81,7 @@ class match:
 
 
 def knn_match(img_des, target_des, k=2):
+
     dist_matrix = calc_dist_matrix(img_des, target_des)
     my_printer("Knn Matches")
 
@@ -121,9 +121,7 @@ def RANSAC(matches, target_kp, img_kp, threshold, iterations=100, k=4):
 
     for i in range(iterations):
         counter = 0
-        random_matches = random.sample(matches,
-                                       k)  # Sample random matches according to homographic = k
-
+        random_matches = random.sample(matches,k)  # Sample random matches according to homographic = k
         src_pts = np.float32([img_kp[random_matches[i].queryIdx].pt for i in range(k)])
         dst_pts = np.float32([target_kp[random_matches[i].trainIdx].pt for i in range(k)])
 
@@ -146,7 +144,6 @@ def RANSAC(matches, target_kp, img_kp, threshold, iterations=100, k=4):
         if counter > best_model_inliers:
             best_model_inliers = counter
             best_M = M
-
     return best_M, matches
 
 
@@ -158,7 +155,6 @@ def script(images_set, threshold, set_name):
 
     target_kp, target_des = target_sift
 
-    # bf = cv.BFMatcher()
     counters = np.zeros(shape=target.shape[:2])
 
     for i, curr_sift in enumerate(img_sift):
@@ -170,17 +166,12 @@ def script(images_set, threshold, set_name):
         good_matches = pass_ratio(matches, ratio=0.8)
 
         M, matches = RANSAC(good_matches, target_kp, img_kp, threshold)
-
         h, w, channels = target.shape
-
         dst = cv.warpPerspective(curr_img, M, (w, h))
 
         results.append(dst)
 
         new_img = np.copy(dst)
-
-        cv2.imshow("warp 1", dst)
-        cv2.waitKey(0)
 
         for i in range(len(new_img)):
             for j in range(len(new_img[i])):
@@ -188,18 +179,18 @@ def script(images_set, threshold, set_name):
                 if color.any():
                     counters[i][j] += 1
 
-    denoised_im = np.zeros(shape=target.shape, dtype=np.float32)
+    deionised_im = np.zeros(shape=target.shape, dtype=np.float32)
     for res in results:
-        denoised_im = denoised_im + res
+        deionised_im = deionised_im + res
 
-    denoised_im /= 255  # colors in cv2 are saved as values in [0, 1] instead of [0, 255]
+    deionised_im /= 255  # colors in cv2 are saved as values in [0, 1] instead of [0, 255]
 
-    for i in range(denoised_im.shape[0]):
-        for j in range(denoised_im.shape[1]):
+    for i in range(deionised_im.shape[0]):
+        for j in range(deionised_im.shape[1]):
             if counters[i][j] != 0:  # avoiding dividing by 0
-                denoised_im[i][j] /= counters[i][j]
+                deionised_im[i][j] /= counters[i][j]
 
-    plotImages(target, denoised_im, set_name)
+    plotImages(target, deionised_im, set_name)
 
 
 if __name__ == '__main__':
@@ -208,11 +199,11 @@ if __name__ == '__main__':
     # my_printer("working on cameleon")
     # script(cameleon_set, 0.5, "cameleon_Denoised")
 
-    my_printer("working on eagle")
-    script(eagle_set, 0.5, "eagle_Denoised")
-    #
-    # my_printer("working on palm")
-    # script(palm_set,100, "palm_Denoised")
-    #
-    # my_printer("working on einstein")
-    # script(einstein_set,100, "einstein_Denoised")
+    # my_printer("working on eagle")
+    # script(eagle_set, 0.5, "eagle_Denoised")
+
+    my_printer("working on palm")
+    script(palm_set, 0.5, "palm_Denoised")
+
+    my_printer("working on einstein")
+    script(einstein_set, 0.5, "einstein_Denoised")
