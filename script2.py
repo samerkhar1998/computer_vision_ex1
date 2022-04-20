@@ -85,7 +85,7 @@ def knn_match(img_des, target_des, k=2):
     dist_matrix = calc_dist_matrix(img_des, target_des)
     my_printer("Knn Matches")
 
-    toRet = []
+    matches = []
     for i in range(len(img_des)):
         x = dist_matrix[i]
         dict = {}
@@ -99,8 +99,8 @@ def knn_match(img_des, target_des, k=2):
                 break
             list.append(match(i, t, sorted_dict[t]))
             k_counter += 1
-        toRet.append(list)
-    return toRet
+        matches.append(list)
+    return matches
 
 
 def pass_ratio(matches, ratio=0.8):
